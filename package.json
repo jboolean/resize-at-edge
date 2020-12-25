@@ -1,0 +1,23 @@
+{
+  "name": "resize-at-edge",
+  "version": "1.0.0",
+  "description": "A service to resize images on Lambda@Edge shared between multiple projects",
+  "main": "index.js",
+  "scripts": {
+    "install-aws-sharp": "rm -rf node_modules/sharp && SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --arch=x64 --platform=linux sharp",
+    "deploy:dev": "npm run install-aws-sharp && serverless deploy --stage dev",
+    "deploy:prod": "npm run install-aws-sharp && serverless deploy --stage production",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "serverless": "^2.16.1",
+    "serverless-domain-manager": "^5.1.0"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "lodash": "^4.17.20",
+    "sharp": "^0.27.0"
+  }
+}

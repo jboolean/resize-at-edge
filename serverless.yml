@@ -1,0 +1,59 @@
+service: resize-at-edge
+
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: production
+  region: us-east-1
+  cloudFront:
+    cachePolicies:
+      resizeImagePolicy:
+        MinTTL: 0
+        MaxTTL: 31536000
+        DefaultTTL: 2592000
+        ParametersInCacheKeyAndForwardedToOrigin:
+          HeadersConfig: 
+            HeaderBehavior: whitelist
+            Headers:
+              - accept
+              - Accept
+          QueryStringsConfig:
+            QueryStringBehavior: whitelist
+            QueryStrings:
+              - width
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingGzip: false
+
+
+
+functions:
+  resize:
+    handler: resize.handler
+    timeout: 30
+    memorySize: 2048
+    tags:
+      Client: woolard
+      Project: cw
+    events:
+      - cloudFront:
+          eventType: origin-request
+          origin: s3://cw-media-production.s3.amazonaws.com
+          cachePolicy:
+              name: resizeImagePolicy
+
+resources:
+  Resources:
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          PriceClass: PriceClass_100
+          Aliases:
+            - media.carolinewoolard.com
+          ViewerCertificate:
+            AcmCertificateArn: arn:aws:acm:us-east-1:197411599260:certificate/2231cd35-377b-4b16-85eb-cfacc640ded4
+            SslSupportMethod: sni-only
+          HttpVersion: http2
