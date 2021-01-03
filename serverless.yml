@@ -2,54 +2,60 @@ service: resize-at-edge
 
 frameworkVersion: '2'
 
+plugins:
+  # The built-in lambda@edge support doesn't support multiple distributions
+  - '@silvermine/serverless-plugin-cloudfront-lambda-edge'
+
 provider:
   name: aws
   runtime: nodejs10.x
+  # There is only one stage as cloudfront distros cannot be shared
   stage: production
   region: us-east-1
-  cloudFront:
-    cachePolicies:
-      resizeImagePolicy:
-        MinTTL: 0
-        MaxTTL: 31536000
-        DefaultTTL: 2592000
-        ParametersInCacheKeyAndForwardedToOrigin:
-          HeadersConfig: 
-            HeaderBehavior: whitelist
-            Headers:
-              - accept
-              - Accept
-          QueryStringsConfig:
-            QueryStringBehavior: whitelist
-            QueryStrings:
-              - width
-          CookiesConfig:
-            CookieBehavior: none
-          EnableAcceptEncodingGzip: false
-
 
 
 functions:
   resize:
     handler: resize.handler
     timeout: 30
-    memorySize: 2048
+    memorySize: 4098
     tags:
       Client: woolard
       Project: cw
-    events:
-      - cloudFront:
-          eventType: origin-request
-          origin: s3://cw-media-production.s3.amazonaws.com
-          cachePolicy:
-              name: resizeImagePolicy
+    lambdaAtEdge:
+      - distribution: CwDistribution
+        eventType: origin-request
+      - distribution: WouDistribution
+        eventType: origin-request
 
 resources:
   Resources:
-    CloudFrontDistribution:
+    ResizeImagePolicy:
+      Type: AWS::CloudFront::CachePolicy
+      Properties:
+        CachePolicyConfig:
+          Name: ResizeImagePolicy
+          MinTTL: 0
+          MaxTTL: 31536000
+          DefaultTTL: 2592000
+          ParametersInCacheKeyAndForwardedToOrigin:
+            HeadersConfig: 
+              HeaderBehavior: whitelist
+              Headers:
+                - accept
+                - Accept
+            QueryStringsConfig:
+              QueryStringBehavior: whitelist
+              QueryStrings:
+                - width
+            CookiesConfig:
+              CookieBehavior: none
+            EnableAcceptEncodingGzip: false
+    CwDistribution:
       Type: AWS::CloudFront::Distribution
       Properties:
         DistributionConfig:
+          Enabled: true
           PriceClass: PriceClass_100
           Aliases:
             - media.carolinewoolard.com
@@ -57,3 +63,34 @@ resources:
             AcmCertificateArn: arn:aws:acm:us-east-1:197411599260:certificate/2231cd35-377b-4b16-85eb-cfacc640ded4
             SslSupportMethod: sni-only
           HttpVersion: http2
+          DefaultCacheBehavior:
+            TargetOriginId: s3/cw-media-production.s3.amazonaws.com
+            CachePolicyId:
+              Ref: ResizeImagePolicy
+            ViewerProtocolPolicy: allow-all
+          Origins:
+            - Id: s3/cw-media-production.s3.amazonaws.com
+              DomainName: cw-media-production.s3.amazonaws.com
+              S3OriginConfig: {}
+              
+    WouDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          PriceClass: PriceClass_100
+          Aliases:
+            - media.studycollaboration.com
+          ViewerCertificate:
+            AcmCertificateArn: arn:aws:acm:us-east-1:197411599260:certificate/dc64d03a-f350-44cf-b48a-a63b29d7beda
+            SslSupportMethod: sni-only
+          HttpVersion: http2
+          DefaultCacheBehavior:
+            TargetOriginId: s3/wou-media-production.s3.amazonaws.com
+            CachePolicyId: 
+              Ref: ResizeImagePolicy
+            ViewerProtocolPolicy: allow-all
+          Origins:
+            - Id: s3/wou-media-production.s3.amazonaws.com
+              DomainName: wou-media-production.s3.amazonaws.com
+              S3OriginConfig: {}

@@ -4,14 +4,14 @@
   "description": "A service to resize images on Lambda@Edge shared between multiple projects",
   "main": "index.js",
   "scripts": {
-    "install-aws-sharp": "rm -rf node_modules/sharp && SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --arch=x64 --platform=linux sharp",
-    "deploy:dev": "npm run install-aws-sharp && serverless deploy --stage dev",
-    "deploy:prod": "npm run install-aws-sharp && serverless deploy --stage production",
+    "install-aws-sharp": "rm -rf node_modules/sharp && SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --no-save --arch=x64 --platform=linux sharp",
+    "deploy": "npm run install-aws-sharp && serverless deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@silvermine/serverless-plugin-cloudfront-lambda-edge": "2.1.1",
     "serverless": "^2.16.1",
     "serverless-domain-manager": "^5.1.0"
   },
